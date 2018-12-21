@@ -78,6 +78,18 @@ class DataSet:
 
         return batch_data
 
+    def get_conct_batch_data(self,start,end):
+
+        shape_1 = self.data_s1.shape[1]
+        shape_2 = self.data_s1.shape[2]
+        shape_3 = self.data_s1.shape[3] + self.data_s2.shape[3]
+        batch_data = numpy.empty((end-start,shape_1,shape_2,shape_3))
+        labels = numpy.empty((end-start,self._labels.shape[1]))
+
+        for i , perm_index in enumerate(self._perm[start:end]):
+            batch_data[i] = numpy.concatenate((self.data_s1[perm_index],self.data_s2[perm_index]),axis = 2)
+            labels[i] = self._labels[perm_index]
+        return batch_data,labels
 
     def next_batch(self, batch_size, shuffle=True):
         start = self._index_in_epoch
@@ -96,9 +108,16 @@ class DataSet:
             self._epochs_completed += 1
             # Get the rest examples in this epoch
             rest_num_examples = self._num_examples - start
-            data_s1_rest_part = self.get_batch_data(self._data_s1,start,self.num_examples)
-            data_s2_rest_part = self.get_batch_data(self._data_s2,start,self.num_examples)
-            labels_rest_part = self.get_batch_data(self._labels,start,self.num_examples)
+
+            if self._return_type == 0:
+                data_rest_part,labels_rest_part = self.get_conct_batch_data(start,self._num_examples)
+            else:
+                if self._return_type == 1:
+                    data_s1_rest_part = self.get_batch_data(self._data_s1,start,self._num_examples)
+                elif self._return_type == 2:
+                    data_s2_rest_part = self.get_batch_data(self._data_s2,start,self._num_examples)
+                labels_rest_part = self.get_batch_data(self._labels,start,self._num_examples)
+
             # Shuffle the data
             if shuffle:
                 perm = numpy.arange(self._num_examples)
@@ -109,28 +128,29 @@ class DataSet:
             start = 0
             self._index_in_epoch = batch_size - rest_num_examples
             end = self._index_in_epoch
-            data_s1_new_part = self.get_batch_data(self._data_s1,start,end)
-            data_s2_new_part = self.get_batch_data(self._data_s2,start,end)
-            labels_new_part = self.get_batch_data(self._labels,start,end)
 
             if self._return_type == 0:
-                return numpy.concatenate((data_s1_rest_part, data_s1_new_part), axis=0), \
-                       numpy.concatenate((data_s2_rest_part, data_s2_new_part), axis=0), \
-                       numpy.concatenate((labels_rest_part, labels_new_part), axis=0)
-            elif self._return_type == 1:
-                return numpy.concatenate((data_s1_rest_part, data_s1_new_part), axis=0), \
-                       numpy.concatenate((labels_rest_part, labels_new_part), axis=0)
-            elif self._return_type == 2:
-                return numpy.concatenate((data_s2_rest_part, data_s2_new_part), axis=0), \
-                       numpy.concatenate((labels_rest_part, labels_new_part), axis=0)
+                data_new_part , labels_new_part = self.get_conct_batch_data(start,end)
+                return numpy.concatenate((data_rest_part, data_new_part), axis=0), \
+                           numpy.concatenate((labels_rest_part, labels_new_part), axis=0)
+            else:
+                labels_new_part = self.get_batch_data(self._labels, start, end)
+                if self._return_type == 1:
+                    data_s1_new_part = self.get_batch_data(self._data_s1,start,end)
+                    return numpy.concatenate((data_s1_rest_part, data_s1_new_part), axis=0), \
+                           numpy.concatenate((labels_rest_part, labels_new_part), axis=0)
+                elif self._return_type == 2:
+                    data_s2_new_part = self.get_batch_data(self._data_s2,start,end)
+                    return numpy.concatenate((data_s2_rest_part, data_s2_new_part), axis=0), \
+                           numpy.concatenate((labels_rest_part, labels_new_part), axis=0)
+
         else:
             self._index_in_epoch += batch_size
             end = self._index_in_epoch
 
             # print('return_type:', self._return_type)
             if self._return_type == 0:
-                return self.get_batch_data(self._data_s1,start,end), self.get_batch_data(self._data_s2,start,end), \
-                       self.get_batch_data(self._labels, start, end)
+                return self.get_conct_batch_data(start,end)
             elif self._return_type == 1:
                 return self.get_batch_data(self._data_s1,start,end), self.get_batch_data(self._labels, start, end)
             elif self._return_type == 2:

@@ -19,11 +19,11 @@ path_validation = os.path.join(base_dir, 'validation.h5')
 fid_validation = h5py.File(path_validation,'r')
 
 # Define loss and optimizer
-x = tf.placeholder(tf.float32, [None, 32,32,8])
+x = tf.placeholder(tf.float32, [None, 32,32,18])
 y_ = tf.placeholder(tf.float32, [None, 17])
 learning_rate = tf.placeholder(tf.float32)
 
-raw_data = DataSet(fid_validation,1)
+raw_data = DataSet(fid_validation)
 
 # The raw formulation of cross-entropy,
 #
@@ -67,7 +67,3 @@ for step in range(3000):
     # learning rate dacey
     if (step + 1) % 300 == 0:
         lr = 0.618 * lr
-
-    if (step + 1) % 1000 == 0:
-        print(sess.run(accuracy, feed_dict={x: mnist.test.images,
-                                            y_: mnist.test.labels, keep_prob: 0.5}))
