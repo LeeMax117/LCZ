@@ -7,12 +7,11 @@ import os
 import tensorflow as tf
 
 from raw_data import DataSet
-from nets import inception
 from nets.inception_v4 import inception_v4
 from nets.test_net import get_net
 
 ### to change according to your machine
-base_dir = os.path.expanduser('D:\Documents\script\python_script\AI\competation\dataset')
+base_dir = os.path.expanduser('/media/leemax/Samsung_T5/tianchi/dataset')
 # path_training = os.path.join(base_dir, 'training.h5')
 path_validation = os.path.join(base_dir, 'validation.h5')
 
@@ -63,28 +62,29 @@ summary_writer = tf.summary.FileWriter('logs', sess.graph)
 # Train
 # Initialized learning rate
 lr = 0.1
-for step in range(3000):
-    batch_xs, batch_ys = raw_data.next_batch(32)
+for step in range(300):
+    batch_xs, batch_ys = raw_data.next_batch(24)
     if raw_data.resize:
         batch_xs = batch_xs.eval(session=sess)
 
     _, summary_1, loss = sess.run(
         [train_step, sum_ops_1, cross_entropy],
         feed_dict={x: batch_xs, y_: batch_ys, learning_rate: lr})
-    ## add summary 1 to file
-    summary_writer.add_summary(summary_1, global_step=step)
 
-    if (step + 1) % 100 == 0:
-        print('y:',y)
-        print('step %d, entropy loss: %f, l2_loss: %f, total loss: %f' %
-              (step + 1, loss, l2_loss_value, total_loss_value))
+
+    if (step + 1) % 10 == 0:
+        ## add summary 1 to file
+        summary_writer.add_summary(summary_1, global_step=step)
+        print('step %d, entropy loss: %f' %
+              (step + 1, loss))
         # Test trained model
-        _, summary_2 = sess.run([accuracy, sum_ops_2], feed_dict={x: batch_xs, y_: batch_ys, keep_prob:0.5})
+        #acc, summary_2 = sess.run([accuracy, sum_ops_2], feed_dict={x: batch_xs, y_: batch_ys})
+        #print(acc)
         ## add summary 2 to file
-        summary_writer.add_summary(summary_2, global_step=step)
+        #summary_writer.add_summary(summary_2, global_step=step)
 
     # learning rate dacey
-    if (step + 1) % 300 == 0:
+    if (step + 1) % 30 == 0:
         lr = 0.618 * lr
         
 summary_writer.close()
