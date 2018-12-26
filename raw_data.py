@@ -1,3 +1,4 @@
+import tensorflow as tf
 from tensorflow.python.framework import dtypes
 from tensorflow.python.framework import random_seed
 import numpy
@@ -10,6 +11,8 @@ import numpy
 class DataSet:
     def __init__(self,
                  full_data,
+                 resize = False,
+                 resize_shape = None,
                  return_type=0,
                  dtype=dtypes.float32,
                  seed=None):
@@ -38,9 +41,25 @@ class DataSet:
 
         self._return_type = return_type
 
+        self._resize = resize
+        if resize:
+            self._shape = resize_shape
+        else:
+            self._shape = []
+            self._shape.append(self._data_s1.shape[1])
+            self._shape.append(self._data_s1.shape[2])
+
     @property
     def return_type(self):
         return self._return_type
+
+    @property
+    def resize(self):
+        return self._resize
+
+    @property
+    def shape(self):
+        return self._shape
 
     @property
     def data_s1(self):
@@ -66,18 +85,27 @@ class DataSet:
     def epochs_completed(self):
         return self._epochs_completed
 
+    # for return_type is 1 or 2, return the specific 10 or 8 channels in sen1 or sen2
     def get_batch_data(self,data,start,end):
 
         # distinguish label and images
         if len(data.shape) < 4:
             batch_data = numpy.empty((end-start,data.shape[1]))
         else:
-            batch_data = numpy.zeros((end-start,data.shape[1],data.shape[2],data.shape[3]))
+            # batch_data = numpy.zeros((end-start,data.shape[1],data.shape[2],data.shape[3]))
+            batch_data = numpy.empty((end - start, self._shape[0], self._shape[1], data.shape[3]))
         for i , perm_index in enumerate(self._perm[start:end]):
-            batch_data[i] = data[perm_index]
+
+            if self._resize:
+                # batch_data[i] = tf.image.resize_bilinear(data[perm_index],self._shape)
+                for l in range(0,7):
+                    batch_data[i][l:3*l-1] = tf.image.resize_bilinear(data[perm_index][l:3*l-1],self._shape)
+            else:
+                batch_data[i] = data[perm_index]
 
         return batch_data
 
+    # for return_type is 0, should concate 18 channels
     def get_conct_batch_data(self,start,end):
 
         shape_1 = self.data_s1.shape[1]
@@ -89,9 +117,15 @@ class DataSet:
         for i , perm_index in enumerate(self._perm[start:end]):
             batch_data[i] = numpy.concatenate((self.data_s1[perm_index],self.data_s2[perm_index]),axis = 2)
             labels[i] = self._labels[perm_index]
+
+        if self._resize:
+            batch_data = tf.image.resize_images(batch_data,self._shape)
+
         return batch_data,labels
 
-    def next_batch(self, batch_size, shuffle=True):
+    def next_batch(self,
+                   batch_size,
+                   shuffle=True):
         start = self._index_in_epoch
         # Shuffle for the first epoch
         if self._epochs_completed == 0 and start == 0 and shuffle:
