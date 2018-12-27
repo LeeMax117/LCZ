@@ -7,11 +7,12 @@ import os
 import tensorflow as tf
 
 from raw_data import DataSet
-from nets.inception_v4 import inception_v4
-from nets.test_net import get_net
+from nets import nets_factory
+
+slim = tf.contrib.slim
 
 ### to change according to your machine
-base_dir = os.path.expanduser('/media/leemax/Samsung_T5/tianchi/dataset')
+base_dir = os.path.expanduser('D:\Documents\script\python_script\AI\competation\dataset')
 # path_training = os.path.join(base_dir, 'training.h5')
 path_validation = os.path.join(base_dir, 'validation.h5')
 
@@ -20,11 +21,12 @@ path_validation = os.path.join(base_dir, 'validation.h5')
 fid_validation = h5py.File(path_validation,'r')
 
 # Define loss and optimizer
-x = tf.placeholder(tf.float32, [None, 299,299,18])
+x = tf.placeholder(tf.float32, [None, 32,32,18])
 y_ = tf.placeholder(tf.float32, [None, 17])
 learning_rate = tf.placeholder(tf.float32)
 
-raw_data = DataSet(fid_validation,resize=True,resize_shape=[299,299])
+# raw_data = DataSet(fid_validation,resize=True,resize_shape=[299,299])
+raw_data = DataSet(fid_validation)
 
 # The raw formulation of cross-entropy,
 #
@@ -33,7 +35,13 @@ raw_data = DataSet(fid_validation,resize=True,resize_shape=[299,299])
 #
 # can be numerically unstable.
 #
-y,endpoints = inception_v4(x,num_classes=17,create_aux_logits=False)
+network_fn = nets_factory.get_network_fn(
+    'M_inception_v4',
+    num_classes=17,
+    weight_decay=0.0001,
+    is_training=True)
+
+y , end_points = network_fn(x)
 
 cross_entropy = tf.reduce_mean(
     tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=y))
@@ -71,12 +79,12 @@ for step in range(300):
         [train_step, sum_ops_1, cross_entropy],
         feed_dict={x: batch_xs, y_: batch_ys, learning_rate: lr})
 
+    print('step %d, entropy loss: %f' %
+          (step + 1, loss))
 
     if (step + 1) % 10 == 0:
         ## add summary 1 to file
         summary_writer.add_summary(summary_1, global_step=step)
-        print('step %d, entropy loss: %f' %
-              (step + 1, loss))
         # Test trained model
         #acc, summary_2 = sess.run([accuracy, sum_ops_2], feed_dict={x: batch_xs, y_: batch_ys})
         #print(acc)
