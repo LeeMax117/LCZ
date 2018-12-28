@@ -16,6 +16,9 @@ base_dir = os.path.expanduser('D:\Documents\script\python_script\AI\competation\
 # path_training = os.path.join(base_dir, 'training.h5')
 path_validation = os.path.join(base_dir, 'validation.h5')
 
+### set the checkpoint path
+ckpt_folder = 'model'
+
 # print(path_training)
 #fid_training = h5py.File(path_training,'r')
 fid_validation = h5py.File(path_validation,'r')
@@ -67,11 +70,16 @@ sess.run(init_op)
 ## setup summary workspace
 summary_writer = tf.summary.FileWriter('logs', sess.graph)
 
+## save the whole NN model into checkpoint path
+saver = tf.train.Saver()
+
 # Train
 # Initialized learning rate
-lr = 0.1
+lr = 0.01
 for step in range(300):
     batch_xs, batch_ys = raw_data.next_batch(24)
+
+    # if use resize, need to transer tensor to numpy
     if raw_data.resize:
         batch_xs = batch_xs.eval(session=sess)
 
@@ -82,12 +90,19 @@ for step in range(300):
     print('step %d, entropy loss: %f' %
           (step + 1, loss))
 
-    if (step + 1) % 10 == 0:
+
+
+    if (step + 1) % 30 == 0:
         ## add summary 1 to file
         summary_writer.add_summary(summary_1, global_step=step)
+
+        # save ckpt
+        ckpt_path = os.path.join(ckpt_folder, 'model.ckpt-%d' % (step + 1))
+        saver.save(sess, ckpt_path)
+        print('Model saved in path %s' % ckpt_path)
         # Test trained model
-        #acc, summary_2 = sess.run([accuracy, sum_ops_2], feed_dict={x: batch_xs, y_: batch_ys})
-        #print(acc)
+        # acc, summary_2 = sess.run([accuracy, sum_ops_2], feed_dict={x: batch_xs, y_: batch_ys})
+        # print(acc)
         ## add summary 2 to file
         #summary_writer.add_summary(summary_2, global_step=step)
 
