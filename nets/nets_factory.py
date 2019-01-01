@@ -22,16 +22,20 @@ import functools
 import tensorflow as tf
 
 from nets import inception
+from nets import densenet
+
 slim = tf.contrib.slim
 
 networks_map = {
                 'inception_v4': inception.inception_v4,
-                'M_inception_v4': inception.M_inception_v4
+                'M_inception_v4': inception.M_inception_v4,
+                'densenet': densenet.densenet,
                }
 
 arg_scopes_map = {
                   'inception_v4': inception.inception_v4_arg_scope,
-                  'M_inception_v4':inception.inception_v4_arg_scope
+                  'M_inception_v4':inception.inception_v4_arg_scope,
+                  'densenet': densenet.densenet_arg_scope,
                  }
 
 
