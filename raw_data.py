@@ -15,6 +15,7 @@ class DataSet:
                  resize_shape = None,
                  return_type=0,
                  dtype=dtypes.float32,
+                 inference = False,
                  seed=None):
 
         seed1, seed2 = random_seed.get_seed(seed)
@@ -25,22 +26,32 @@ class DataSet:
             raise TypeError('Invalid image dtype %r, expected uint8 or float32' %
                             dtype)
 
-        assert (full_data['sen1'].shape[0] == full_data['label'].shape[0] \
-                and full_data['sen2'].shape[0] == full_data['label'].shape[0]), ( \
-                    'sen1.shape: %s  sen2.shape: %s labels.shape: %s' % \
-                    (full_data['sen1'].shape, full_data['sen2'].shape, full_data['labels']))
+        if inference:
+            assert(full_data['sen1'].shape[0] == full_data['sen2'].shape[0])
+        else:
+            assert (full_data['sen1'].shape[0] == full_data['label'].shape[0] \
+                    and full_data['sen2'].shape[0] == full_data['label'].shape[0]), ( \
+                        'sen1.shape: %s  sen2.shape: %s labels.shape: %s' % \
+                        (full_data['sen1'].shape, full_data['sen2'].shape, full_data['labels']))
 
         self._num_examples = full_data['sen1'].shape[0]
 
-        self._labels = full_data['label']
+        if not inference:
+            self._labels = full_data['label']
+        else:
+            self._labels = None
+
         self._data_s1 = full_data['sen1']
         self._data_s2 = full_data['sen2']
+
+        self._inference = inference
 
         self._epochs_completed = 0
         self._index_in_epoch = 0
 
         self._return_type = return_type
 
+        # use resize to resize the image
         self._resize = resize
         if resize:
             self._shape = resize_shape
@@ -52,6 +63,14 @@ class DataSet:
     @property
     def return_type(self):
         return self._return_type
+
+    @property
+    def inference(self):
+        return self._inference
+
+    @property
+    def index_in_epoch(self):
+        return self._index_in_epoch
 
     @property
     def resize(self):
@@ -70,12 +89,11 @@ class DataSet:
         return self._data_s2
 
     @property
-    def label(self):
-        return self._label
-
-    @property
     def labels(self):
-        return self._labels
+        if self._inference:
+            return None
+        else:
+            return self._labels
 
     @property
     def num_examples(self):
@@ -112,20 +130,26 @@ class DataSet:
         shape_2 = self.data_s1.shape[2]
         shape_3 = self.data_s1.shape[3] + self.data_s2.shape[3]
         batch_data = numpy.empty((end-start,shape_1,shape_2,shape_3))
-        labels = numpy.empty((end-start,self._labels.shape[1]))
+        if self._labels:
+            labels = numpy.empty((end-start,self._labels.shape[1]))
 
         for i , perm_index in enumerate(self._perm[start:end]):
             batch_data[i] = numpy.concatenate((self.data_s1[perm_index],self.data_s2[perm_index]),axis = 2)
-            labels[i] = self._labels[perm_index]
+            if self._labels:
+                labels[i] = self._labels[perm_index]
 
         if self._resize:
             batch_data = tf.image.resize_images(batch_data,self._shape)
 
-        return batch_data,labels
+        if self._labels:
+            return batch_data,labels
+        else:
+            return batch_data
 
     def next_batch(self,
                    batch_size,
-                   shuffle=True):
+                   shuffle=True,
+                   is_trainning = True):
         start = self._index_in_epoch
         # Shuffle for the first epoch
         if self._epochs_completed == 0 and start == 0 and shuffle:
@@ -145,12 +169,16 @@ class DataSet:
 
             if self._return_type == 0:
                 data_rest_part,labels_rest_part = self.get_conct_batch_data(start,self._num_examples)
+                if self._inference or (not is_trainning):
+                    return data_rest_part
             else:
                 if self._return_type == 1:
                     data_s1_rest_part = self.get_batch_data(self._data_s1,start,self._num_examples)
                 elif self._return_type == 2:
                     data_s2_rest_part = self.get_batch_data(self._data_s2,start,self._num_examples)
                 labels_rest_part = self.get_batch_data(self._labels,start,self._num_examples)
+                if not is_trainning:
+                    return data_rest_part, labels_rest_part
 
             # Shuffle the data
             if shuffle:
