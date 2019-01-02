@@ -19,12 +19,7 @@ fid_validation = h5py.File(path_validation,'r')
 
 raw_data = DataSet(fid_validation,inference = True)
 
-def inference_once(placeholder,logit,batch_size):
-
-    saver = tf.train.Saver()
-    sess = tf.Session()
-    checkpoint_path = 'model/model.ckpt-10'
-    saver.restore(sess, checkpoint_path)
+def inference_once(placeholder,logit,batch_size,sess = None):
 
     # y_ = tf.placeholder(tf.float32, [None, 17])
 
@@ -57,8 +52,14 @@ batch_size = 24
 list_predict = []
 
 inferenced_batch = 0
+
+saver = tf.train.Saver()
+sess = tf.Session()
+checkpoint_path = 'model/model.ckpt-10'
+saver.restore(sess, checkpoint_path)
+
 while not raw_data.epochs_completed:
-    logits = inference_once(placeholder,logit,batch_size)
+    logits = inference_once(placeholder,logit,batch_size,sess = sess)
     for i in logits[0]:
         onehot = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
         onehot[np.argmax(i)] = 1

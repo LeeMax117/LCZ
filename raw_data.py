@@ -132,6 +132,8 @@ class DataSet:
         batch_data = numpy.empty((end-start,shape_1,shape_2,shape_3))
         if self._labels:
             labels = numpy.empty((end-start,self._labels.shape[1]))
+        else:
+            labels = None
 
         for i , perm_index in enumerate(self._perm[start:end]):
             batch_data[i] = numpy.concatenate((self.data_s1[perm_index],self.data_s2[perm_index]),axis = 2)
@@ -141,10 +143,8 @@ class DataSet:
         if self._resize:
             batch_data = tf.image.resize_images(batch_data,self._shape)
 
-        if self._labels:
-            return batch_data,labels
-        else:
-            return batch_data
+
+        return batch_data,labels
 
     def next_batch(self,
                    batch_size,
@@ -170,6 +170,7 @@ class DataSet:
             if self._return_type == 0:
                 data_rest_part,labels_rest_part = self.get_conct_batch_data(start,self._num_examples)
                 if self._inference or (not is_trainning):
+                    print(data_rest_part.shape)
                     return data_rest_part
             else:
                 if self._return_type == 1:
@@ -212,7 +213,11 @@ class DataSet:
 
             # print('return_type:', self._return_type)
             if self._return_type == 0:
-                return self.get_conct_batch_data(start,end)
+                batch_data , batch_labels = self.get_conct_batch_data(start,end)
+                if not self._inference:
+                    return batch_data , batch_labels
+                else:
+                    return batch_data
             elif self._return_type == 1:
                 return self.get_batch_data(self._data_s1,start,end), self.get_batch_data(self._labels, start, end)
             elif self._return_type == 2:
