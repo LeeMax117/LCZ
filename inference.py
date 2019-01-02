@@ -23,7 +23,7 @@ def inference_once(placeholder,logit,batch_size):
 
     saver = tf.train.Saver()
     sess = tf.Session()
-    checkpoint_path = 'model/model.ckpt-30'
+    checkpoint_path = 'model/model.ckpt-7'
     saver.restore(sess, checkpoint_path)
 
     y_ = tf.placeholder(tf.float32, [None, 17])

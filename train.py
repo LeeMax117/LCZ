@@ -21,7 +21,7 @@ base_dir = os.path.expanduser('D:\Documents\script\python_script\AI\competation\
 path_validation = os.path.join(base_dir, 'validation.h5')
 ### set the checkpoint path
 ckpt_folder = 'model'
-finetune_ckpt = None
+finetune_ckpt = 'D:\Documents\script\python_script\AI\competation\inception_v4.ckpt'
 # define the process of trainning or validation
 is_trainning = True
 
@@ -33,7 +33,6 @@ fid_validation = h5py.File(path_validation,'r')
 x = tf.placeholder(tf.float32, [None, 32,32,18])
 y_ = tf.placeholder(tf.float32, [None, 17])
 learning_rate = tf.placeholder(tf.float32)
-global_step = tf.Variable(0, name='step')
 
 # raw_data = DataSet(fid_validation,resize=True,resize_shape=[299,299])
 raw_data = DataSet(fid_validation)
@@ -81,7 +80,11 @@ summary_writer = tf.summary.FileWriter('logs', sess.graph)
 saver = tf.train.Saver(max_to_keep=3)
 
 if finetune_ckpt:
-    saver.restore(sess, finetune_ckpt)
+    exclude = ['InceptionV4/Logits','Conv2d_1a_3x3','Conv2d_2a_3x3','Conv2d_2b_3x3','Mixed_3a','InceptionV4/Mixed_4a','InceptionV4/AuxLogits']
+    variables_to_restore = slim.get_variables_to_restore(exclude=exclude)
+    # print(variables_to_restore)
+    saver_inception = tf.train.Saver(variables_to_restore)
+    saver_inception.restore(sess, finetune_ckpt)
 else:
     model_file = tf.train.latest_checkpoint(ckpt_folder)
     try:
@@ -94,22 +97,22 @@ else:
 if is_trainning:
     # Initialized learning rate
     lr = 0.01
-    for step in range(300):
+    step = 0
+    while True:
+        step += 1
         batch_xs, batch_ys = raw_data.next_batch(12)
-
-        global_step = global_step + 1
         # if use resize, need to transer tensor to numpy
         if raw_data.resize:
             batch_xs = batch_xs.eval(session=sess)
 
-        _, summary_1, loss, g_step = sess.run(
-            [train_step, sum_ops_1, cross_entropy, global_step],
+        _, summary_1, loss = sess.run(
+            [train_step, sum_ops_1, cross_entropy],
             feed_dict={x: batch_xs, y_: batch_ys, learning_rate: lr})
 
         print('step %d, entropy loss: %f' %
-              (g_step, loss))
+              (step, loss))
 
-        if (step + 1) % 2 == 0:
+        if step % 2 == 0:
             ## add summary 1 to file
             summary_writer.add_summary(summary_1, global_step=step)
 
@@ -125,7 +128,7 @@ if is_trainning:
             summary_writer.close()
 
         # learning rate dacey
-        if (step + 1) % 30 == 0:
+        if step % 30 == 0:
             lr = 0.618 * lr
 else:
     correct_prediction = tf.equal(tf.argmax(logit, 1), tf.argmax(y_, 1))
