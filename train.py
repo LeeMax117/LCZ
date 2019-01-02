@@ -21,9 +21,14 @@ base_dir = os.path.expanduser('D:\Documents\script\python_script\AI\competation\
 path_validation = os.path.join(base_dir, 'validation.h5')
 ### set the checkpoint path
 ckpt_folder = 'model'
-finetune_ckpt = 'D:\Documents\script\python_script\AI\competation\inception_v4.ckpt'
+
+# finetune_ckpt = 'D:\Documents\script\python_script\AI\competation\inception_v4.ckpt'
+finetune_ckpt = None
 # define the process of trainning or validation
-is_trainning = True
+is_trainning = False
+######################
+###### end of define the parameters
+#####################################
 
 # print(path_training)
 #fid_training = h5py.File(path_training,'r')
@@ -47,7 +52,6 @@ raw_data = DataSet(fid_validation)
 network_fn = nets_factory.get_network_fn(
     'M_inception_v4',
     num_classes=17,
-    weight_decay=0.0001,
     is_training=is_trainning)
 
 y , end_points = network_fn(x)
@@ -79,24 +83,27 @@ summary_writer = tf.summary.FileWriter('logs', sess.graph)
 ## save the whole NN model into checkpoint path
 saver = tf.train.Saver(max_to_keep=3)
 
-if finetune_ckpt:
+if finetune_ckpt and is_trainning:
     exclude = ['InceptionV4/Logits','Conv2d_1a_3x3','Conv2d_2a_3x3','Conv2d_2b_3x3','Mixed_3a','InceptionV4/Mixed_4a','InceptionV4/AuxLogits']
     variables_to_restore = slim.get_variables_to_restore(exclude=exclude)
     # print(variables_to_restore)
     saver_inception = tf.train.Saver(variables_to_restore)
     saver_inception.restore(sess, finetune_ckpt)
+    print('load weight from %s'%finetune_ckpt)
 else:
     model_file = tf.train.latest_checkpoint(ckpt_folder)
     try:
         saver.restore(sess, model_file)
     except ValueError:
-        if os.path.isdir(ckpt_folder):
+        if os.path.isdir(ckpt_folder) or not os.path.exists(ckpt_folder):
             print('trainning from beginning')
+            if not os.path.exists(ckpt_folder):
+                print('create new ckpt folder in %s'%ckpt_folder)
 
 # Train
 if is_trainning:
     # Initialized learning rate
-    lr = 0.01
+    lr = 0.001
     step = 0
     while True:
         step += 1
@@ -131,9 +138,11 @@ if is_trainning:
         if step % 30 == 0:
             lr = 0.618 * lr
 else:
-    correct_prediction = tf.equal(tf.argmax(logit, 1), tf.argmax(y_, 1))
+    correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(y_, 1))
     accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
-    batch_xs, batch_ys = raw_data.next_batch(24)
-    acc = sess.run(accuracy, feed_dict={placeholder: batch_xs, y_: batch_ys})
-    print(acc)
+    print('start inference from %d data'%raw_data.index_in_epoch)
+    while not raw_data.epochs_completed:
+        batch_xs, batch_ys = raw_data.next_batch(24,is_trainning = is_trainning)
+        acc = sess.run(accuracy, feed_dict={x: batch_xs, y_: batch_ys})
+        print(acc)
