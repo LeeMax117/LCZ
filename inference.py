@@ -18,6 +18,7 @@ path_validation = os.path.join(base_dir, 'round1_test_a_20181109.h5')
 fid_validation = h5py.File(path_validation,'r')
 
 raw_data = DataSet(fid_validation,inference = True)
+raw_data.normalize_data()
 
 def inference_once(placeholder,logit,batch_size,sess = None):
 
@@ -55,7 +56,7 @@ inferenced_batch = 0
 
 saver = tf.train.Saver()
 sess = tf.Session()
-checkpoint_path = 'model/model.ckpt-10'
+checkpoint_path = 'model/model.ckpt-26'
 saver.restore(sess, checkpoint_path)
 
 while not raw_data.epochs_completed:

@@ -5,9 +5,11 @@ from __future__ import print_function
 import h5py
 import os
 import tensorflow as tf
+import json
 
 from raw_data import DataSet
 from nets import nets_factory
+import numpy as np
 
 slim = tf.contrib.slim
 
@@ -20,12 +22,14 @@ base_dir = os.path.expanduser('D:\Documents\script\python_script\AI\competation\
 # path_training = os.path.join(base_dir, 'training.h5')
 path_validation = os.path.join(base_dir, 'validation.h5')
 ### set the checkpoint path
-ckpt_folder = 'model'
+ckpt_folder = 'D:\Documents\script\python_script\AI\competation\LCZ_classifier\model'
+### set the train status data file path
+json_path = os.path.join(ckpt_folder, 'train_data.json')
 
 # finetune_ckpt = 'D:\Documents\script\python_script\AI\competation\inception_v4.ckpt'
 finetune_ckpt = None
 # define the process of trainning or validation
-is_trainning = False
+is_trainning = True
 ######################
 ###### end of define the parameters
 #####################################
@@ -61,7 +65,7 @@ cross_entropy = tf.reduce_mean(
 
 # l2_loss = tf.add_n([tf.nn.l2_loss(w) for w in tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)])
 # total_loss = cross_entropy + 7e-5 * l2_loss
-train_step = tf.train.GradientDescentOptimizer(learning_rate).minimize(cross_entropy)
+train_step =  tf.train.AdamOptimizer(learning_rate).minimize(cross_entropy)
 
 correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(y_, 1))
 accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
@@ -83,6 +87,8 @@ summary_writer = tf.summary.FileWriter('logs', sess.graph)
 ## save the whole NN model into checkpoint path
 saver = tf.train.Saver(max_to_keep=3)
 
+glb_step = 0
+
 if finetune_ckpt and is_trainning:
     exclude = ['InceptionV4/Logits','Conv2d_1a_3x3','Conv2d_2a_3x3','Conv2d_2b_3x3','Mixed_3a','InceptionV4/Mixed_4a','InceptionV4/AuxLogits']
     variables_to_restore = slim.get_variables_to_restore(exclude=exclude)
@@ -99,12 +105,37 @@ else:
             print('trainning from beginning')
             if not os.path.exists(ckpt_folder):
                 print('create new ckpt folder in %s'%ckpt_folder)
+	
+	### load training status data from json file
+    try:
+        with open(json_path, 'r') as file:
+            train_data_paras = json.load(file)
+            glb_step = train_data_paras['glb_step']
+            raw_data.set_ind_in_epoch(train_data_paras['ind_in_epoch'])
+            raw_data.set_epochs_completed(train_data_paras['epochs_completed'])
+            raw_data.set_random_list(train_data_paras['random_list'])
+            raw_data.set_normalize_para(train_data_paras['average'],train_data_paras['standard'])
+                
+    except (IOError) as e:
+        print('create new json file')
+
+        if not os.path.exists(ckpt_folder):
+            os.mkdir(ckpt_folder)
+
+        with open(json_path, 'w') as f:
+            dict_to_dump = {}
+            # initialize the parameter to normalize
+            raw_data.normalize_data()
+            dict_to_dump['average'] = raw_data.average
+            dict_to_dump['standard'] = raw_data.standard
+            json.dump(dict_to_dump, f)
+        print('normalized para has been stored in %s'%json_path)
 
 # Train
 if is_trainning:
     # Initialized learning rate
-    lr = 0.001
-    step = 0
+    lr = 0.1
+    step = glb_step
     while True:
         step += 1
         batch_xs, batch_ys = raw_data.next_batch(12)
@@ -126,6 +157,16 @@ if is_trainning:
             # save ckpt
             ckpt_path = os.path.join(ckpt_folder, 'model.ckpt')
             saver.save(sess, ckpt_path , global_step=step)
+			# save raw data parameters.
+            with open(json_path, 'w') as file:
+                jdict = dict()
+                jdict['glb_step'] = step
+                jdict['average'] = raw_data.average
+                jdict['standard'] = raw_data.standard
+                jdict['ind_in_epoch'] = raw_data.index_in_epoch
+                jdict['epochs_completed'] = raw_data.epochs_completed
+                jdict['random_list'] = raw_data.random_list.tolist()
+                json.dump(jdict, file)
             print('Model saved in path %s' % ckpt_path)
             # Test trained model
             # acc, summary_2 = sess.run([accuracy, sum_ops_2], feed_dict={x: batch_xs, y_: batch_ys})

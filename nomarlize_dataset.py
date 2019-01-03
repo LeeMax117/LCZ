@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import math
 
 def add_image(image,sum,s_var):
     for row in image:
@@ -10,7 +11,7 @@ def add_image(image,sum,s_var):
             s_var = s_var + i*i
     return sum, s_var
 
-def get_avg_var(data):
+def get_avg_standard(data):
 
     # initilize the layer_sum:
     layer_sum = []
@@ -24,16 +25,14 @@ def get_avg_var(data):
             layer_sum[channel_num], layer_s_var[channel_num] = \
                 add_image(per_data[:,:,channel_num],layer_sum[channel_num], layer_s_var[channel_num])
 
-    layer_avg , layer_var = [],[]
+    layer_avg , layer_var , layer_standard = [] , [] , []
     sum_var = []
     for i in range(0, data.shape[3]):
         layer_avg.append(layer_sum[i] / data.shape[0])
         layer_var.append((layer_s_var[i] - layer_avg[i]*layer_avg[i]) / (data.shape[0]-1))
-        sum_var.append(layer_s_var[i]/ (data.shape[0]-1))
+        layer_standard.append(math.sqrt(layer_var[i]))
 
-    print('sum_var:',sum_var)
-
-    return layer_avg , layer_var
+    return layer_avg , layer_standard
 
 
 

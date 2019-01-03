@@ -2,7 +2,7 @@ import tensorflow as tf
 from tensorflow.python.framework import dtypes
 from tensorflow.python.framework import random_seed
 import numpy
-
+from nomarlize_dataset import get_avg_standard
 
 # for return_type:
 # 0 - return mixed sen1 and sen2 as 18 channels
@@ -102,6 +102,49 @@ class DataSet:
     @property
     def epochs_completed(self):
         return self._epochs_completed
+    
+    @property
+    def random_list(self):
+        return self._perm
+
+    @property
+    def average(self):
+        return self._average
+
+    @property
+    def standard(self):
+        return self._standard
+    
+    def set_ind_in_epoch(self, ind_in_epoch):
+        self._index_in_epoch = ind_in_epoch
+        
+    def set_epochs_completed(self, epochs_completed):
+        self._epochs_completed = epochs_completed
+        
+    def set_random_list(self, random_list):
+        self._perm = numpy.array(random_list)
+
+    def set_normalize_para(self,average,standard):
+        self._average = average
+        self._standard = standard
+
+    def normalize_data(self):
+        print('starting normalize the dataset')
+        if self.return_type == 0:
+            # get s1 avg and standard first
+            average, standard = get_avg_standard(self._data_s1)
+            s2_average, s2_standard = get_avg_standard(self._data_s2)
+            average.extend(s2_average)
+            standard.extend(s2_standard)
+
+            self._average = average
+            self._standard = standard
+
+            print('normalized done')
+
+        else:
+            print('not surpport this return_type yet.....')
+
 
     # for return_type is 1 or 2, return the specific 10 or 8 channels in sen1 or sen2
     def get_batch_data(self,data,start,end):
@@ -143,6 +186,8 @@ class DataSet:
         if self._resize:
             batch_data = tf.image.resize_images(batch_data,self._shape)
 
+        # normalize the data
+        batch_data = (batch_data - self._average)/self._standard
 
         return batch_data,labels
 
