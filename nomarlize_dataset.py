@@ -1,41 +1,47 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-
 import math
+import numpy as np
 
-def add_image(image,sum,s_var):
+
+def add_image(image, sum_, s_var):
     for row in image:
         for i in row:
-            sum = sum + i
+            sum_ = sum_ + i
             s_var = s_var + i*i
-    return sum, s_var
+    return sum_, s_var
+
 
 def get_avg_standard(data):
-
     # initilize the layer_sum:
     layer_sum = []
     layer_s_var = []
-    for i in range(0,data.shape[3]):
+    for i in range(0, data.shape[3]):
         layer_sum.append(0)
         layer_s_var.append(0)
 
     for per_data in data:
-        for channel_num in range(0,per_data.shape[2]):
+        for channel_num in range(0, per_data.shape[2]):
             layer_sum[channel_num], layer_s_var[channel_num] = \
-                add_image(per_data[:,:,channel_num],layer_sum[channel_num], layer_s_var[channel_num])
+                add_image(per_data[:, :, channel_num], layer_sum[channel_num], layer_s_var[channel_num])
 
-    layer_avg , layer_var , layer_standard = [] , [] , []
+    layer_avg, layer_var, layer_standard = [], [], []
     sum_var = []
+    total_num = data.shape[0]*data.shape[1]*data.shape[2]
     for i in range(0, data.shape[3]):
-        layer_avg.append(layer_sum[i] / data.shape[0])
-        layer_var.append((layer_s_var[i] - layer_avg[i]*layer_avg[i]) / (data.shape[0]-1))
+        layer_avg.append(layer_sum[i] / total_num)
+        layer_var.append((layer_s_var[i] - total_num * layer_avg[i]*layer_avg[i]) / (total_num-1))
         layer_standard.append(math.sqrt(layer_var[i]))
 
-    return layer_avg , layer_standard
+    return layer_avg, layer_standard
 
 
-
+if __name__ == '__main__':
+    n = np.ones((2, 2, 2, 4))
+    # n = n.reshape(2, 2, 2, 4)
+    # print(n)
+    print(get_avg_standard(n))
 
 
 
