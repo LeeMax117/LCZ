@@ -21,9 +21,9 @@ slim = tf.contrib.slim
 ### to change according to your machine
 base_dir = os.path.expanduser('/media/leemax/Samsung_T5/tianchi/dataset')
 # path_training = os.path.join(base_dir, 'training.h5')
-path_validation = os.path.join(base_dir, 'training.h5')
+path_validation = os.path.join(base_dir, 'validation.h5')
 ### set the checkpoint path
-ckpt_folder = './model-train'
+ckpt_folder = './model'
 ### set the train status data file path
 json_path = os.path.join(ckpt_folder, 'train_data.json')
 
@@ -162,7 +162,7 @@ if is_training:
             [train_step, summary_op, cross_entropy, l2_loss, total_loss, increment_op],
             feed_dict={x: batch_xs, y_: batch_ys, keep_prob:0.5})
 
-        if setps % 100 == 0:
+        if steps % 100 == 0:
             print('step %d, entropy loss: %f, ls_loss: %f, total_loss:%f' %
                   (steps, loss, l2_loss_value, total_loss_value))
 

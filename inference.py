@@ -9,9 +9,10 @@ import h5py
 import os
 from raw_data import DataSet
 from nets import nets_factory
+from nets.test_net import get_net
 
 ### to change according to your machine
-base_dir = os.path.expanduser('/media/leemax/Samsung_T5/tianchi/dataset')
+base_dir = os.path.expanduser('/media/leemax/Samsung_T5/tianchi')
 # path_training = os.path.join(base_dir, 'training.h5')
 path_validation = os.path.join(base_dir, 'round1_test_a_20181109.h5')
 #fid_training = h5py.File(path_training,'r')
@@ -24,7 +25,7 @@ def inference_once(placeholder,logit,batch_size,sess = None):
 
     # y_ = tf.placeholder(tf.float32, [None, 17])
 
-    batch_xs = raw_data.next_batch(batch_size,is_trainning = is_training)
+    batch_xs = raw_data.next_batch(batch_size,is_training = is_training, shuffle= False)
 
     logit_value = sess.run([logit], feed_dict={placeholder:batch_xs})
 
@@ -47,16 +48,16 @@ network_fn = nets_factory.get_network_fn(
     num_classes=17,
     is_training=is_training)
 
-logit , end_points = network_fn(placeholder)
+logit , keep_prob = get_net(placeholder)
 
-batch_size = 24
+batch_size = 100
 list_predict = []
 
 inferenced_batch = 0
 
 saver = tf.train.Saver()
 sess = tf.Session()
-checkpoint_path = 'model/model.ckpt-26'
+checkpoint_path = 'model/model.ckpt-4500'
 saver.restore(sess, checkpoint_path)
 
 while not raw_data.epochs_completed:

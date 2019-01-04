@@ -197,13 +197,13 @@ class DataSet:
                    is_training = True):
         start = self._index_in_epoch
         # Shuffle for the first epoch
-        if self._epochs_completed == 0 and start == 0 and shuffle:
+        if self._epochs_completed == 0 and start == 0:
 
+            perm0 = numpy.arange(self._num_examples)
             # shuffle the dataset
             if shuffle:
-                perm0 = numpy.arange(self._num_examples)
                 numpy.random.shuffle(perm0)
-                self._perm = perm0
+            self._perm = perm0
 
         # Go to the next epoch
         if start + batch_size > self._num_examples:
