@@ -26,17 +26,16 @@ def get_net(inputs):
                                      padding='SAME',
                                      activation_fn=tf.nn.relu)
 
-    # 8*8
+    # 8*8*64
     # Second pooling layer.
     with tf.name_scope('pool2'):
         h_pool2 = tf.contrib.slim.max_pool2d(h_conv2, [2, 2],
                                          stride=[2, 2], padding='VALID')
 
-    # 8*8*1024
+    # 1*1*1024
     with tf.name_scope('fc1'):
-        h_pool2_flat = tf.contrib.slim.avg_pool2d(h_pool2, h_pool2.shape[1:3],
-                                              stride=[1, 1], padding='VALID')
-        h_fc1 = tf.contrib.slim.conv2d(h_pool2_flat, 1024, [1, 1], activation_fn=tf.nn.relu)
+        h_pool2_flat = tf.contrib.slim.flatten(h_pool2)
+        h_fc1 = tf.contrib.slim.fully_connected(h_pool2_flat, 1024, activation_fn=tf.nn.relu)
 
     # Dropout - controls the complexity of the model, prevents co-adaptation of
     # features.
@@ -44,8 +43,9 @@ def get_net(inputs):
         keep_prob = tf.placeholder(tf.float32)
         h_fc1_drop = tf.nn.dropout(h_fc1, keep_prob)
 
+    # Map the 1024 features to 17 classes, one for each digit
     # Map the 1024 features to 10 classes, one for each digit
     with tf.name_scope('fc2'):
-        y = tf.squeeze(tf.contrib.slim.conv2d(h_fc1_drop, 17, [1, 1], activation_fn=None))
+        y = tf.squeeze(tf.contrib.slim.fully_connected(h_fc1, 17, activation_fn=None))
 
     return y,keep_prob
