@@ -2,7 +2,7 @@ import tensorflow as tf
 from tensorflow.python.framework import dtypes
 from tensorflow.python.framework import random_seed
 import numpy
-from nomarlize_dataset import get_avg_standard
+from nomarlize_dataset import get_avg_stand
 
 # for return_type:
 # 0 - return mixed sen1 and sen2 as 18 channels
@@ -128,12 +128,12 @@ class DataSet:
         self._average = average
         self._standard = standard
 
-    def normalize_data(self):
+    def normalize_data(self,batch_size):
         print('starting normalize the dataset')
         if self.return_type == 0:
             # get s1 avg and standard first
-            average, standard = get_avg_standard(self._data_s1)
-            s2_average, s2_standard = get_avg_standard(self._data_s2)
+            average, standard = get_avg_stand(self._data_s1,batch_size)
+            s2_average, s2_standard = get_avg_stand(self._data_s2,batch_size)
             average.extend(s2_average)
             standard.extend(s2_standard)
 

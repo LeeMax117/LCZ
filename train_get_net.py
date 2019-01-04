@@ -19,7 +19,7 @@ slim = tf.contrib.slim
 ###########################################
 
 ### to change according to your machine
-base_dir = os.path.expanduser('/media/leemax/Samsung_T5/tianchi/dataset')
+base_dir = os.path.expanduser('D:\Documents\script\python_script\AI\competation\dataset')
 # path_training = os.path.join(base_dir, 'training.h5')
 path_validation = os.path.join(base_dir, 'validation.h5')
 ### set the checkpoint path
@@ -30,8 +30,8 @@ json_path = os.path.join(ckpt_folder, 'train_data.json')
 # finetune_ckpt = 'D:\Documents\script\python_script\AI\competation\inception_v4.ckpt'
 finetune_ckpt = None
 # define the process of trainning or validation
-is_training = False
-train_from_begining = False
+is_training = True
+train_from_begining = True
 ######################
 ###### end of define the parameters
 #####################################
@@ -135,7 +135,7 @@ else:
         with open(json_path, 'w') as f:
             dict_to_dump = {}
             # initialize the parameter to normalize
-            raw_data.normalize_data()
+            raw_data.normalize_data(batch_size = 10000)
             dict_to_dump['average'] = raw_data.average
             dict_to_dump['standard'] = raw_data.standard
             json.dump(dict_to_dump, f)
@@ -162,7 +162,7 @@ if is_training:
             [train_step, summary_op, cross_entropy, l2_loss, total_loss, increment_op],
             feed_dict={x: batch_xs, y_: batch_ys, keep_prob:0.5})
 
-        if steps % 100 == 0:
+        if steps % 2 == 0:
             print('step %d, entropy loss: %f, ls_loss: %f, total_loss:%f' %
                   (steps, loss, l2_loss_value, total_loss_value))
 
