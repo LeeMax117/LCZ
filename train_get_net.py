@@ -19,8 +19,8 @@ slim = tf.contrib.slim
 ###########################################
 
 ### to change according to your machine
-base_dir = os.path.expanduser('D:\Documents\script\python_script\AI\competation\dataset')
-# path_training = os.path.join(base_dir, 'training.h5')
+base_dir = os.path.expanduser('/media/leemax/Samsung_T5/tianchi/dataset')
+path_training = os.path.join(base_dir, 'training.h5')
 path_validation = os.path.join(base_dir, 'validation.h5')
 ### set the checkpoint path
 ckpt_folder = './model'
@@ -38,9 +38,11 @@ train_from_begining = True
 
 # print(path_training)
 #fid_training = h5py.File(path_training,'r')
-fid_validation = h5py.File(path_validation,'r')
+fid_train = h5py.File(path_training, 'r')
+fid_validation = h5py.File(path_validation, 'r')
 # raw_data = DataSet(fid_validation,resize=True,resize_shape=[299,299])
-raw_data = DataSet(fid_validation)
+
+raw_data = DataSet(fid_train)
 
 val_data = DataSet(fid_validation)
 
@@ -59,11 +61,13 @@ increment_op = tf.assign_add(global_step, tf.constant(1))
 #
 # can be numerically unstable.
 #
+'''
 network_fn = nets_factory.get_network_fn(
     'densenet',
     num_classes=17,
     weight_decay = 0.00004,
     is_training = is_training)
+'''
 
 y , keep_prob = get_net(x)
 
@@ -74,7 +78,7 @@ total_loss = cross_entropy + 7e-5*l2_loss
 
 #########################################################################################
 # exponential decay learning rate
-learning_rate = tf.train.exponential_decay(0.001, global_step, decay_steps=1, decay_rate=0.9997, staircase=False)
+learning_rate = tf.train.exponential_decay(0.01, global_step, decay_steps=1, decay_rate=0.9997, staircase=False)
 train_step =  tf.train.AdamOptimizer(learning_rate).minimize(cross_entropy)
 
 ## add loss and accuracy into summaries
@@ -105,13 +109,18 @@ if finetune_ckpt and is_training:
     print('load weight from %s'%finetune_ckpt)
 else:
     model_file = tf.train.latest_checkpoint(ckpt_folder)
-    try:
-        saver.restore(sess, model_file)
-    except ValueError:
-        if os.path.isdir(ckpt_folder) or not os.path.exists(ckpt_folder):
-            print('trainning from beginning')
-            if not os.path.exists(ckpt_folder):
-                print('create new ckpt folder in %s'%ckpt_folder)
+    if train_from_begining and is_training:
+        print('trainning from beginning')
+        if not os.path.exists(ckpt_folder):
+            print('create new ckpt folder in %s' % ckpt_folder)
+    else:
+         try:
+            saver.restore(sess, model_file)
+         except ValueError:
+            if os.path.isdir(ckpt_folder) or not os.path.exists(ckpt_folder):
+                print('trainning from beginning')
+                if not os.path.exists(ckpt_folder):
+                    print('create new ckpt folder in %s'%ckpt_folder)
 	
 	### load training status data from json file
     try:
@@ -135,7 +144,7 @@ else:
         with open(json_path, 'w') as f:
             dict_to_dump = {}
             # initialize the parameter to normalize
-            raw_data.normalize_data(batch_size = 10000)
+            raw_data.normalize_data(batch_size = 50000)
             dict_to_dump['average'] = raw_data.average
             dict_to_dump['standard'] = raw_data.standard
             json.dump(dict_to_dump, f)
@@ -153,7 +162,7 @@ summary_op = tf.summary.merge(list(summaries), name='summary_op')
 if is_training:
 
     while True:
-        batch_xs, batch_ys = raw_data.next_batch(100)
+        batch_xs, batch_ys = raw_data.next_batch(200)
         # if use resize, need to transer tensor to numpy
         if raw_data.resize:
             batch_xs = batch_xs.eval(session=sess)
@@ -162,7 +171,7 @@ if is_training:
             [train_step, summary_op, cross_entropy, l2_loss, total_loss, increment_op],
             feed_dict={x: batch_xs, y_: batch_ys, keep_prob:0.5})
 
-        if steps % 2 == 0:
+        if steps % 50 == 0:
             print('step %d, entropy loss: %f, ls_loss: %f, total_loss:%f' %
                   (steps, loss, l2_loss_value, total_loss_value))
 
@@ -196,8 +205,12 @@ else:
     #sum_ops_2 = tf.summary.merge([acc_summary])
 
     print('start inference from %d data'%val_data.index_in_epoch)
-    val_data.set_normalize_para(raw_data.average, raw_data.standard)
+    val_data.normalize_data(batch_size = 50000)
+    correct_num = 0
     while not val_data.epochs_completed:
-        batch_xs, batch_ys = val_data.next_batch(24,is_training = is_training)
+        batch_xs, batch_ys = val_data.next_batch(100,is_training = is_training)
         acc = sess.run(accuracy, feed_dict={x: batch_xs, y_: batch_ys})
+        correct_num += batch_xs.shape[0] * acc
         print(acc)
+
+    print('the whole acc is %f'%(correct_num/val_data.num_examples))
