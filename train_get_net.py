@@ -9,6 +9,7 @@ import json
 
 from raw_data import DataSet
 from nets import nets_factory
+from nets.test_net import get_net
 import numpy as np
 
 slim = tf.contrib.slim
@@ -20,16 +21,16 @@ slim = tf.contrib.slim
 ### to change according to your machine
 base_dir = os.path.expanduser('/media/leemax/Samsung_T5/tianchi/dataset')
 # path_training = os.path.join(base_dir, 'training.h5')
-path_validation = os.path.join(base_dir, 'validation.h5')
+path_validation = os.path.join(base_dir, 'training.h5')
 ### set the checkpoint path
-ckpt_folder = './model'
+ckpt_folder = './model-train'
 ### set the train status data file path
 json_path = os.path.join(ckpt_folder, 'train_data.json')
 
 # finetune_ckpt = 'D:\Documents\script\python_script\AI\competation\inception_v4.ckpt'
 finetune_ckpt = None
 # define the process of trainning or validation
-is_training = True
+is_training = False
 train_from_begining = False
 ######################
 ###### end of define the parameters
@@ -64,10 +65,12 @@ network_fn = nets_factory.get_network_fn(
     weight_decay = 0.00004,
     is_training = is_training)
 
-y , end_points = network_fn(x)
+y , keep_prob = get_net(x)
 
 cross_entropy = tf.reduce_mean(
     tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=y))
+l2_loss = tf.add_n( [tf.nn.l2_loss(w) for w in tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)] )
+total_loss = cross_entropy + 7e-5*l2_loss
 
 #########################################################################################
 # exponential decay learning rate
@@ -75,7 +78,7 @@ learning_rate = tf.train.exponential_decay(0.001, global_step, decay_steps=1, de
 train_step =  tf.train.AdamOptimizer(learning_rate).minimize(cross_entropy)
 
 ## add loss and accuracy into summaries
-loss_summary = tf.summary.scalar('total_loss', cross_entropy)
+loss_summary = tf.summary.scalar('total_loss', total_loss)
 lr_summary = tf.summary.scalar('learning_rate', learning_rate)
 
 # limit the GPU usage
@@ -150,17 +153,18 @@ summary_op = tf.summary.merge(list(summaries), name='summary_op')
 if is_training:
 
     while True:
-        batch_xs, batch_ys = raw_data.next_batch(32)
+        batch_xs, batch_ys = raw_data.next_batch(100)
         # if use resize, need to transer tensor to numpy
         if raw_data.resize:
             batch_xs = batch_xs.eval(session=sess)
 
-        _, summary, loss, steps = sess.run(
-            [train_step, summary_op, cross_entropy, increment_op],
-            feed_dict={x: batch_xs, y_: batch_ys})
+        _, summary, loss, l2_loss_value, total_loss_value, steps = sess.run(
+            [train_step, summary_op, cross_entropy, l2_loss, total_loss, increment_op],
+            feed_dict={x: batch_xs, y_: batch_ys, keep_prob:0.5})
 
-        print('step %d, entropy loss: %f' %
-              (steps, loss))
+        if setps % 100 == 0:
+            print('step %d, entropy loss: %f, ls_loss: %f, total_loss:%f' %
+                  (steps, loss, l2_loss_value, total_loss_value))
 
         if steps % 500 == 0:
             ######################################################

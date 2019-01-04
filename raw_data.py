@@ -194,7 +194,7 @@ class DataSet:
     def next_batch(self,
                    batch_size,
                    shuffle=True,
-                   is_trainning = True):
+                   is_training = True):
         start = self._index_in_epoch
         # Shuffle for the first epoch
         if self._epochs_completed == 0 and start == 0 and shuffle:
@@ -214,7 +214,7 @@ class DataSet:
 
             if self._return_type == 0:
                 data_rest_part,labels_rest_part = self.get_conct_batch_data(start,self._num_examples)
-                if self._inference or (not is_trainning):
+                if self._inference or (not is_training):
                     print(data_rest_part.shape)
                     return data_rest_part
             else:
@@ -223,7 +223,7 @@ class DataSet:
                 elif self._return_type == 2:
                     data_s2_rest_part = self.get_batch_data(self._data_s2,start,self._num_examples)
                 labels_rest_part = self.get_batch_data(self._labels,start,self._num_examples)
-                if not is_trainning:
+                if not is_training:
                     return data_rest_part, labels_rest_part
 
             # Shuffle the data

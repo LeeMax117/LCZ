@@ -11,7 +11,7 @@ from raw_data import DataSet
 from nets import nets_factory
 
 ### to change according to your machine
-base_dir = os.path.expanduser('D:\Documents\script\python_script\AI\competation\dataset')
+base_dir = os.path.expanduser('/media/leemax/Samsung_T5/tianchi/dataset')
 # path_training = os.path.join(base_dir, 'training.h5')
 path_validation = os.path.join(base_dir, 'round1_test_a_20181109.h5')
 #fid_training = h5py.File(path_training,'r')
