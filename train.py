@@ -47,7 +47,7 @@ json_path_train = os.path.join(ckpt_folder, 'train_data.json')
 ### set the validation status data file path
 json_path_valid = os.path.join(ckpt_folder, 'valid_data.json')
 
-# finetune_ckpt = 'D:\Documents\script\python_script\AI\competation\inception_v4.ckpt'
+finetune_ckpt = 'D:\Documents\script\python_script\AI\competation\inception_v4.ckpt'
 finetune_ckpt = None
 # define the process of trainning or validation
 is_training = True
@@ -82,7 +82,7 @@ increment_op = tf.assign_add(global_step, tf.constant(1))
 #
 
 network_fn = nets_factory.get_network_fn(
-    'densenet',
+    'M_inception_v4',
     num_classes=17,
     weight_decay = 0.00004,
     is_training = is_training)
